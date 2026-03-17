@@ -1,0 +1,10 @@
+fastapi
+itsdangerous
+jinja2
+matplotlib
+mplfinance
+pandas
+pydantic
+sortedcontainers
+uvicorn
+websocket-client

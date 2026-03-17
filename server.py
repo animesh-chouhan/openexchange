@@ -286,7 +286,11 @@ async def read_root(request: Request):
 
 
 @app.get("/login")
-async def login(request: Request, username: str):
+async def login(request: Request, username: str | None = None):
+    if username is None:
+        return templates.TemplateResponse(
+            "login.html", get_template_context(request, "login")
+        )
     normalized = validate_username(username)
     if not normalized:
         return templates.TemplateResponse(

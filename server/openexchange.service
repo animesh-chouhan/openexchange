@@ -1,0 +1,14 @@
+[Unit]
+Description=OpenExchange FastAPI App
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/opt/openexchange
+Environment="ADMIN_PASSWORD=your-admin-password"
+ExecStart=/opt/openexchange/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
