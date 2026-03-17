@@ -560,8 +560,8 @@ def get_ohlc_data():
     df["time"] = pd.to_datetime(df["time"], unit="s")
     df.set_index("time", inplace=True)
 
-    ohlc = df["price"].resample("1S").ohlc()
-    volume = df["volume"].resample("1S").sum()
+    ohlc = df["price"].resample("1s").ohlc()
+    volume = df["volume"].resample("1s").sum()
     ohlc["volume"] = volume
     ohlc = ohlc.dropna()
 
