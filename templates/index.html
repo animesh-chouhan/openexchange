@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenOdha Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body class="page-login">
+    <div class="page-shell auth-shell">
+        <section class="panel auth-panel">
+            <p class="eyebrow">Stock Trading Game Demo</p>
+            <h1>OpenExchange</h1>
+            <h1>Live trading game</h1>
+            <p class="hero-text">Join the 2-minute round as a trader or open the admin console to run the demo.</p>
+
+            <div class="auth-form">
+                <a class="primary-button landing-button" href="/login">Join As Trader</a>
+                <a class="mini-status nav-mini-status landing-ghost" href="/admin">Admin Console</a>
+            </div>
+
+            <div class="auth-footnote">
+                <span>Status:</span>
+                <strong>{{ game.status|capitalize }}</strong>
+                <span> | Players:</span>
+                <strong>{{ game.active_players|length }}</strong>
+            </div>
+        </section>
+    </div>
+</body>
+
+</html>

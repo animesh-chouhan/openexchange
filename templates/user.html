@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenOdha User Trading Screen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body class="page-user">
+    <div class="page-shell">
+        <header class="hero">
+            <div class="hero-copy">
+                <p class="eyebrow">2 minute round</p>
+                <h1><span id="hero-trader-name">{{ current_user or "Trader" }}</span>'s<span
+                        class="hero-title-suffix">dashboard</span></h1>
+                <!-- <p class="hero-text">Trade fast, watch the tape, and finish the round with the highest marked-to-market
+                    portfolio value.</p> -->
+            </div>
+            <div class="hero-status hero-status-compact">
+                <!-- <a class="mini-status nav-mini-status" href="/admin">Admin console</a> -->
+                <div class="mini-status mini-status-live">
+                    <span class="pulse"></span>
+                    <span id="engine-status">Connecting</span>
+                    <span class="mini-status-divider"></span>
+                    <span id="last-updated">Waiting for data</span>
+                </div>
+                <div class="mini-status">
+                    <span id="game-phase">{{ game.status|capitalize }}</span>
+                    <span class="mini-status-divider"></span>
+                    <span id="game-timer">02:00</span>
+                </div>
+                <form method="post" action="/logout">
+                    <button type="submit" class="mini-status nav-mini-status mini-status-button">Logout</button>
+                </form>
+            </div>
+        </header>
+        <section class="stats-grid stats-grid-user stats-grid-compact">
+            <article class="metric-card accent-users">
+                <span class="metric-label">You</span>
+                <strong id="selected-trader-card">{{ current_user or "--" }}</strong>
+                <span class="metric-subtext" id="leader-value">Leader --</span>
+            </article>
+            <article class="metric-card accent-volume">
+                <span class="metric-label">Portfolio value</span>
+                <strong id="top-portfolio-value">--</strong>
+                <span class="metric-subtext" id="top-portfolio-subtext">Cash --</span>
+            </article>
+            <article class="metric-card accent-rise">
+                <span class="metric-label">Last traded price</span>
+                <strong id="ltp-value">--</strong>
+                <span class="metric-subtext" id="spread-value">Spread --</span>
+            </article>
+            <article class="metric-card accent-depth">
+                <span class="metric-label">Best bid / ask</span>
+                <strong id="bid-ask-value">-- / --</strong>
+                <span class="metric-subtext" id="mid-value">Mid --</span>
+            </article>
+
+        </section>
+
+        <main class="dashboard-grid dashboard-grid-user">
+            <section class="panel chart-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="panel-kicker">Market chart</p>
+                        <!-- <h2>Live candles</h2> -->
+                    </div>
+                    <!-- <span class="panel-chip">Execution context</span> -->
+                </div>
+                <div id="ohlc-chart" class="chart-surface"></div>
+            </section>
+
+            <aside class="panel trade-panel">
+                <span class="panel-chip panel-chip-floating" id="order-status-chip">Ready</span>
+                <div class="panel-header">
+                    <div>
+                        <!-- <p class="panel-kicker">Execution</p> -->
+                        <h2>Place order</h2>
+                    </div>
+                </div>
+
+                <form id="order-form" class="order-form">
+                    <label class="quantity-row">
+                        <span>Quantity</span>
+                        <input type="number" id="quantity-input" name="quantity" min="1" step="1" value="10"
+                            placeholder="Enter quantity">
+                    </label>
+
+                    <div class="trade-actions">
+                        <button type="submit" id="buy-order-btn" class="trade-button trade-button-buy"
+                            data-side="buy">Buy</button>
+                        <button type="submit" id="sell-order-btn" class="trade-button trade-button-sell"
+                            data-side="sell">Sell</button>
+                    </div>
+                </form>
+
+                <p id="order-feedback" class="feedback-text">The round starts when the first player sends an order.</p>
+            </aside>
+
+            <section class="panel book-panel">
+                <div class="panel-header">
+                    <div>
+                        <!-- <p class="panel-kicker">Liquidity</p> -->
+                        <h2>Order book</h2>
+                    </div>
+                    <!-- <span class="panel-chip">Top of book</span> -->
+                </div>
+                <div class="book-columns">
+                    <div class="book-table">
+                        <div class="book-title buy">Bids</div>
+                        <div id="bids-book" class="book-rows"></div>
+                    </div>
+                    <div class="book-table">
+                        <div class="book-title sell">Asks</div>
+                        <div id="asks-book" class="book-rows"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel profile-panel">
+                <div class="panel-header">
+                    <div>
+                        <!-- <p class="panel-kicker">Your profile</p> -->
+                        <h2>Trader snapshot</h2>
+                    </div>
+                    <span class="panel-chip panel-chip-profile-floating">Live portfolio</span>
+                </div>
+
+                <div class="profile-grid">
+                    <article class="profile-card">
+                        <span>Portfolio value</span>
+                        <strong id="profile-portfolio">--</strong>
+                    </article>
+                    <article class="profile-card">
+                        <span>Cash</span>
+                        <strong id="profile-cash">--</strong>
+                    </article>
+                    <article class="profile-card">
+                        <span>Holdings</span>
+                        <strong id="profile-holdings">--</strong>
+                    </article>
+                    <article class="profile-card">
+                        <span>Rank</span>
+                        <strong id="profile-rank">--</strong>
+                    </article>
+                </div>
+            </section>
+
+
+        </main>
+    </div>
+
+    <script>
+        window.__TRADERS__ = {{ game.active_players | tojson }};
+        window.__PAGE__ = {{ page_name | tojson }};
+        window.__CURRENT_USER__ = {{ current_user | tojson }};
+        window.__GAME__ = {{ game | tojson }};
+    </script>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="/static/script.js"></script>
+</body>
+
+</html>

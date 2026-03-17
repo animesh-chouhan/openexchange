@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenOdha Trading Game</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body class="page-login">
+    <div class="page-shell auth-shell">
+        <section class="panel auth-panel">
+            <p class="eyebrow">2 minute stock game</p>
+            <h1>Enter your trader name and join the round!</h1>
+            <p class="hero-text">Use a simple username, trade for 2 minutes, and try to finish with the highest
+                portfolio value.</p>
+
+            {% if error %}
+            <p class="auth-error">{{ error }}</p>
+            {% endif %}
+
+            <form class="auth-form" method="get" action="/login">
+                <label>
+                    <span>Username</span>
+                    <input type="text" name="username" placeholder="animesh" value="{{ entered_username or '' }}"
+                        maxlength="20" required>
+                </label>
+                <button type="submit" class="primary-button">Join Game</button>
+            </form>
+
+            <div class="auth-footnote">
+                <span>Allowed:</span>
+                <strong>letters, numbers, `_`, `-`</strong>
+            </div>
+        </section>
+    </div>
+</body>
+
+</html>

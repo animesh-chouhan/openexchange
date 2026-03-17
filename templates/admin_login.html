@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="page-login">
+    <div class="page-shell auth-shell">
+        <section class="panel auth-panel">
+            <p class="eyebrow">Admin access</p>
+            <h1>Unlock the admin console.</h1>
+            <p class="hero-text">Enter the admin password to manage rounds and watch the live game dashboard.</p>
+            <p class="auth-error" id="admin-login-error" hidden>Invalid admin password.</p>
+            <form id="admin-login-form" class="auth-form">
+                <label>
+                    <span>Password</span>
+                    <input type="password" id="admin-password" name="password" required>
+                </label>
+                <button type="submit" class="primary-button">Enter Admin Console</button>
+            </form>
+        </section>
+    </div>
+    <script>
+        document.getElementById("admin-login-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const password = document.getElementById("admin-password").value;
+            const errorNode = document.getElementById("admin-login-error");
+
+            const response = await fetch("/admin/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password }),
+            });
+            const payload = await response.json();
+
+            if (!response.ok || payload.error) {
+                errorNode.hidden = false;
+                return;
+            }
+
+            window.location.href = "/admin";
+        });
+    </script>
+</body>
+</html>

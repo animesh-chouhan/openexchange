@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenOdha Admin Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body class="page-admin">
+    <div class="page-shell">
+        <header class="hero">
+            <div class="hero-copy">
+                <!-- <p class="eyebrow">Admin view</p> -->
+                <h1>Admin View</h1>
+                <!-- <p class="hero-text">Track price action, liquidity, and trader rankings from a single market-ops dashboard.</p> -->
+            </div>
+            <div class="hero-status hero-status-compact">
+                <a class="mini-status nav-mini-status" href="/user">User trading page</a>
+                <div class="mini-status mini-status-live">
+                    <span class="pulse"></span>
+                    <span id="engine-status">Connecting</span>
+                    <span class="mini-status-divider"></span>
+                    <span id="last-updated">Waiting for data</span>
+                </div>
+                <div class="mini-status">
+                    <span id="game-phase">{{ game.status|capitalize }}</span>
+                    <span class="mini-status-divider"></span>
+                    <span id="game-timer">02:00</span>
+                </div>
+                <button type="button" id="admin-start-btn" class="mini-status nav-mini-status mini-status-button">Start
+                    Round</button>
+                <button type="button" id="admin-reset-btn" class="mini-status nav-mini-status mini-status-button">Reset
+                    Round</button>
+                <button type="button" id="admin-reset-all-btn"
+                    class="mini-status nav-mini-status mini-status-button">Reset
+                    All</button>
+                <button type="button" id="load-test-btn" class="mini-status nav-mini-status mini-status-button">Load
+                    Test</button>
+                <button type="button" id="admin-logout-btn" class="mini-status nav-mini-status mini-status-button">Lock
+                    Admin</button>
+            </div>
+        </header>
+
+        <section class="stats-grid stats-grid-compact">
+            <article class="metric-card accent-rise">
+                <span class="metric-label">Last traded price</span>
+                <strong id="ltp-value">--</strong>
+                <span class="metric-subtext" id="spread-value">Spread --</span>
+            </article>
+            <article class="metric-card accent-depth">
+                <span class="metric-label">Best bid / ask</span>
+                <strong id="bid-ask-value">-- / --</strong>
+                <span class="metric-subtext" id="mid-value">Mid --</span>
+            </article>
+            <article class="metric-card accent-volume">
+                <span class="metric-label">Recent candle range</span>
+                <strong id="range-value">--</strong>
+                <span class="metric-subtext" id="volume-value">Volume --</span>
+            </article>
+            <article class="metric-card accent-users">
+                <span class="metric-label">Active traders</span>
+                <strong id="trader-count">{{ traders|length }}</strong>
+                <span class="metric-subtext" id="leader-value">Leader --</span>
+            </article>
+        </section>
+
+        <main class="dashboard-grid dashboard-grid-admin">
+            <section class="panel chart-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="panel-kicker">Market chart</p>
+                        <!-- <h2>Candlestick view</h2> -->
+                    </div>
+                    <!-- <span class="panel-chip">1 second candles</span> -->
+                </div>
+                <div id="ohlc-chart" class="chart-surface"></div>
+            </section>
+
+            <section class="panel book-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="panel-kicker">Liquidity</p>
+                        <h2>Order book</h2>
+                    </div>
+                    <span class="panel-chip">Top of book</span>
+                </div>
+                <div class="book-columns">
+                    <div class="book-table">
+                        <div class="book-title buy">Bids</div>
+                        <div id="bids-book" class="book-rows"></div>
+                    </div>
+                    <div class="book-table">
+                        <div class="book-title sell">Asks</div>
+                        <div id="asks-book" class="book-rows"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel leaderboard-panel">
+                <div class="panel-header">
+                    <div>
+                        <!-- <p class="panel-kicker">Rankings</p> -->
+                        <h2>Leaderboard</h2>
+                    </div>
+                    <span class="panel-chip">Marked to market</span>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Trader</th>
+                                <th>Holdings</th>
+                                <th>Cash</th>
+                                <th>Portfolio</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        window.__TRADERS__ = {{ game.active_players | tojson }};
+        window.__PAGE__ = {{ page_name | tojson }};
+        window.__CURRENT_USER__ = {{ current_user | tojson }};
+        window.__GAME__ = {{ game | tojson }};
+    </script>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="/static/script.js"></script>
+</body>
+
+</html>
