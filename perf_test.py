@@ -1,7 +1,7 @@
 import time
 import matplotlib.pyplot as plt
 from random import randint, choice, uniform
-from engine_fifo import Order, OrderBook
+from engine_heapnodes import Order, OrderBook
 
 
 def time_each_call(func, repeat):
