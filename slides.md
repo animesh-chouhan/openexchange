@@ -22,6 +22,84 @@ Animesh Chouhan
 
 ---
 
+# What happens when you press BUY?
+
+(Think: “What happens when you search on Google?”)
+
+---
+
+### Step 1 — Request leaves your app
+
+- you tap BUY
+- request is sent to your broker
+
+**You never talk to the exchange directly.**
+
+---
+
+### Step 2 — Broker validates the order
+
+- checks balance
+- checks risk limits
+- validates order format
+
+**Why?**  
+Bad orders should never reach the market.
+
+---
+
+### Step 3 — Broker routes the order
+
+- selects an exchange
+- forwards your order
+
+**Why?**  
+To get the best price and fastest execution.
+
+---
+
+### Step 4 — Order enters the exchange
+
+- added to the order book
+- sits with all other buy/sell orders
+
+**This is the “database” of the market.**
+
+---
+
+### Step 5 — Matching engine runs
+
+- compares:
+  - highest buyer
+  - lowest seller
+
+if best_bid >= best_ask:
+trade()
+
+**This is the core algorithm.**
+
+---
+
+### Step 6 — Trade executes
+
+- shares change hands
+- price is recorded
+- everyone sees the update
+
+---
+
+### Final Mental Model
+
+**BUY click → Broker → Exchange → Order Book → Matching → Trade**
+
+---
+
+### One Line Summary
+
+**A stock trade is just a request flowing through a series of systems that enforce rules before matching supply and demand.**
+
+---
+
 # What is a Stock Exchange?
 
 A stock exchange:
