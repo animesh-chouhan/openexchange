@@ -221,3 +221,47 @@ But…
 ### One Line
 
 This single question has shaped billions of dollars of trading infrastructure.
+
+# What is a Stock Exchange?
+
+At a surface level:
+
+**A stock exchange is just code running in a datacenter.**
+
+---
+
+But this code is different.
+
+It must guarantee:
+
+- fairness
+- determinism
+- extreme speed
+
+---
+
+### What it actually is
+
+- an order book (data structure)
+- a matching engine (algorithm)
+- strict rules enforced at scale
+
+---
+
+### One Line
+
+**Code where nanoseconds decide who makes money.**
+
+🎤 Delivery tip
+
+Say your original line casually:
+
+“It’s just a datacenter running code.”
+
+Pause.
+
+Then:
+
+“But that code controls billions of dollars… in microseconds.”
+
+That contrast hits hard.
