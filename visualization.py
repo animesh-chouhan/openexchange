@@ -11,7 +11,11 @@ from matplotlib.animation import FuncAnimation
 from matplotlib.gridspec import GridSpec
 
 
+import logging
+
 from engine_fifo import Order, OrderBook
+
+logger = logging.getLogger(__name__)
 
 
 class Visualization:
@@ -223,7 +227,7 @@ def generate_random_order(book):
 def run_simulation(book):
     while True:
         order = generate_random_order(book)
-        print(order)
+        logger.debug("generated order: %s", order)
         book.place_order(order)
         time.sleep(0.05)
 

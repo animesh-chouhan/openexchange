@@ -3,11 +3,15 @@ import random
 import threading
 from collections import defaultdict
 from decimal import Decimal
+import logging
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 from engine_fifo import OrderBook, Order
+
+# module logger
+logger = logging.getLogger(__name__)
 
 
 class Trader:
@@ -40,20 +44,25 @@ class Trader:
                 self.holdings += filled
                 self.cash -= filled * ltp
             else:
-                print(f"{self.name:<8}: Insufficient cash for buy")
+                logger.warning("%s: Insufficient cash for buy", self.name)
         else:  # Allow unlimited short sells
             self.holdings -= filled
             self.cash += filled * ltp
 
-        print(
-            f"{self.name:<7}: {side.upper():<4} order {quantity:>3} shares, filled {filled:>3} at ₹{ltp:>6.2f}"
+        logger.debug(
+            "%-7s: %-4s order %3d shares, filled %3d at ₹%6.2f",
+            self.name,
+            side.upper(),
+            quantity,
+            filled,
+            float(ltp),
         )
 
     def cancel_order(self, order_id, book):
         if order_id in self.orders:
             book.cancel_order(order_id)
             del self.orders[order_id]
-            print(f"{self.name:<10} cancelled order {order_id}")
+            logger.debug("%-10s cancelled order %s", self.name, order_id)
 
     def update_portfolio(self, current_price):
         if current_price and not (
@@ -181,12 +190,17 @@ class TradingSimulation:
                 trader.cash -= cost  # Deduct cost (may go negative)
                 trader.holdings = 0
                 if trader.cash >= 0:
-                    print(
-                        f"{trader.name:<8} settled shorts: bought back {qty_to_cover:>3} at ₹{final_price:>6.2f}"
+                    logger.info(
+                        "%-8s settled shorts: bought back %3d at ₹%6.2f",
+                        trader.name,
+                        qty_to_cover,
+                        float(final_price),
                     )
                 else:
-                    print(
-                        f"{trader.name:<8} forced settlement: cash now ₹{trader.cash:>10.2f} (negative)"
+                    logger.warning(
+                        "%-8s forced settlement: cash now ₹%6.2f (negative)",
+                        trader.name,
+                        float(trader.cash),
                     )
             trader.update_portfolio(final_price)
 

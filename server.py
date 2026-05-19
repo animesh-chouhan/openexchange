@@ -70,6 +70,15 @@ sim = TradingSimulation(num_traders=0)
 sim.start_simulation()
 game_round = GameRound()
 
+import logging
+
+# Configure logging format and level for the whole app
+log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=getattr(logging, log_level, logging.INFO),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=secrets.token_hex(32))
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -268,11 +277,24 @@ def seed_bot_players(count: int, prefix: str):
 
 def get_template_context(request: Request, page_name: str):
     sync_game_round()
+    game_snapshot = game_round.snapshot()
+    # JSON-safe snapshot for templates/inline JS (avoid unhashable/complex objects)
+    game_json = {
+        "status": game_snapshot.get("status"),
+        "round_id": game_snapshot.get("round_id"),
+        "started_at": game_snapshot.get("started_at"),
+        "ends_at": game_snapshot.get("ends_at"),
+        "seconds_remaining": int(game_snapshot.get("seconds_remaining", 0)),
+        "duration_seconds": int(game_snapshot.get("duration_seconds", 0)),
+        "active_players": list(game_snapshot.get("active_players", [])),
+    }
+
     return {
         "request": request,
         "page_name": page_name,
         "current_user": get_logged_in_user(request),
-        "game": game_round.snapshot(),
+        "game": game_snapshot,
+        "game_json": game_json,
     }
 
 

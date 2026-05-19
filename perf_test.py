@@ -2,6 +2,9 @@ import time
 import matplotlib.pyplot as plt
 from random import randint, choice, uniform
 from engine_heapnodes import Order, OrderBook
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def time_each_call(func, repeat):
@@ -29,7 +32,7 @@ def benchmark_all(n=1000):
         book.place_order(order)
         ids.append(order.id)
 
-    print("Benchmarking: place_order()...")
+    logger.info("Benchmarking: place_order()...")
     results["Place Order"] = time_each_call(place_one, n)
 
     # Benchmark get_order_by_id
@@ -38,7 +41,7 @@ def benchmark_all(n=1000):
             oid = choice(ids)
             _ = book.get_order_by_id(oid)
 
-    print("Benchmarking: get_order_by_id()...")
+    logger.info("Benchmarking: get_order_by_id()...")
     results["Get Order"] = time_each_call(get_one, n)
 
     # Benchmark cancel_order
@@ -50,7 +53,7 @@ def benchmark_all(n=1000):
             except KeyError:
                 pass
 
-    print("Benchmarking: cancel_order()...")
+    logger.info("Benchmarking: cancel_order()...")
     results["Cancel Order"] = time_each_call(cancel_one, n)
 
     # Benchmark update_order
@@ -65,19 +68,19 @@ def benchmark_all(n=1000):
             except KeyError:
                 pass
 
-    print("Benchmarking: update_order()...")
+    logger.info("Benchmarking: update_order()...")
     results["Update Order"] = time_each_call(update_one, n)
 
     # Benchmark get_order_book_depth
-    print("Benchmarking: get_order_book_depth()...")
+    logger.info("Benchmarking: get_order_book_depth()...")
     results["Get Book Depth"] = time_each_call(book.get_order_book_depth, n)
 
     # Benchmark last_trading_price
-    print("Benchmarking: last_trading_price...")
+    logger.info("Benchmarking: last_trading_price...")
     results["Last Price"] = time_each_call(lambda: book.last_trading_price, n)
 
     # Benchmark matching throughput (trades per second)
-    print("Benchmarking: matching throughput...")
+    logger.info("Benchmarking: matching throughput...")
     start = time.perf_counter()
     for _ in range(n * 10):  # Place more orders for throughput test
         side = choice(["buy", "sell"])
@@ -115,20 +118,22 @@ def plot_all_distributions(latency_dict):
 
 
 if __name__ == "__main__":
-    print("Running microbenchmarks...")
+    logger.info("Running microbenchmarks...")
     latency_data = benchmark_all(n=1000)
 
-    print("\nBenchmark Results Summary:")
+    logger.info("\nBenchmark Results Summary:")
     for name, times in latency_data.items():
         if times:
             if name == "Matching Throughput":
-                print(f"{name}: {times[0]:.2f} trades/sec")
+                logger.info("%s: %.2f trades/sec", name, times[0])
             else:
                 avg = sum(times) / len(times)
                 min_t = min(times)
                 max_t = max(times)
-                print(f"{name}: Avg={avg:.3f}ms, Min={min_t:.3f}ms, Max={max_t:.3f}ms")
+                logger.info(
+                    "%s: Avg=%.3fms, Min=%.3fms, Max=%.3fms", name, avg, min_t, max_t
+                )
         else:
-            print(f"{name}: No data")
+            logger.info("%s: No data", name)
 
     plot_all_distributions(latency_data)

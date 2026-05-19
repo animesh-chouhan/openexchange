@@ -588,7 +588,7 @@ if (loadTestButton) {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    count: 100,
+                    count: 500,
                     prefix: "noobot",
                 }),
             });

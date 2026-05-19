@@ -30,7 +30,7 @@
                     <span id="last-updated">Waiting for data</span>
                 </div>
                 <div class="mini-status">
-                    <span id="game-phase">{{ game.status|capitalize }}</span>
+                    <span id="game-phase">{{ game_json.status|capitalize }}</span>
                     <span class="mini-status-divider"></span>
                     <span id="game-timer">02:00</span>
                 </div>
@@ -66,7 +66,7 @@
             </article>
             <article class="metric-card accent-users">
                 <span class="metric-label">Active traders</span>
-                <strong id="trader-count">{{ traders|length }}</strong>
+                <strong id="trader-count">{{ game_json.active_players|length }}</strong>
                 <span class="metric-subtext" id="leader-value">Leader --</span>
             </article>
         </section>

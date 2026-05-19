@@ -1,7 +1,11 @@
 import itertools
 from datetime import datetime
+import logging
 from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_EVEN
+
+# module logger (single instance)
+logger = logging.getLogger(__name__)
 
 
 class Order:
@@ -62,7 +66,7 @@ class OrderBook:
         else:  # 'sell'
             self.sells.append(order)
 
-        print(f"Placed {order}")
+        logger.debug("Placed %s", order)
         self._match_orders()
 
     def _match_orders(self):
@@ -92,7 +96,7 @@ class OrderBook:
             # Create and record the trade
             trade = Trade(trade_price, trade_quantity, best_buy.id, best_sell.id)
             self.trades.append(trade)
-            print(f"Executed {trade}")
+            logger.debug("Executed %s", trade)
 
             # Update the remaining quantities of the orders
             best_buy.remaining -= trade_quantity
@@ -133,7 +137,7 @@ class OrderBook:
         for order in self.sells:
             if not order.is_filled:
                 sell_levels[order.price] += order.remaining
-        
+
         # Filter out zero-quantity levels before returning
         buy_levels = {p: q for p, q in buy_levels.items() if q > 0}
         sell_levels = {p: q for p, q in sell_levels.items() if q > 0}
@@ -156,31 +160,33 @@ if __name__ == "__main__":
     book = OrderBook()
 
     # Add some orders
+    # the module-level `logger` is available
+
     book.place_order(Order(side="buy", price=100, quantity=10))
-    print(book.get_order_book_depth())
+    logger.info(book.get_order_book_depth())
 
     book.place_order(Order(side="sell", price=102, quantity=5))
-    print(book.get_order_book_depth())
+    logger.info(book.get_order_book_depth())
 
     book.place_order(Order(side="buy", price=101, quantity=8))
-    print(book.get_order_book_depth())
+    logger.info(book.get_order_book_depth())
 
     # This order should trigger a trade
-    print("### Placing an order that should trigger a trade ###")
+    logger.info("### Placing an order that should trigger a trade ###")
     book.place_order(Order(side="sell", price=101, quantity=12))
-    print(book.get_order_book_depth())
+    logger.info(book.get_order_book_depth())
 
-    print("### Final Trades ###")
+    logger.info("### Final Trades ###")
     for t in book.trades:
-        print(t)
+        logger.info(t)
 
-    print(f"\nLast trading price: {book.last_trading_price}")
+    logger.info("\nLast trading price: %s", book.last_trading_price)
 
     # Cancel an order
     # First, let's place an order to be cancelled
     book.place_order(Order(side="buy", price=99, quantity=5))
-    print(book.get_order_book_depth())
+    logger.info(book.get_order_book_depth())
     order_to_cancel_id = list(book.orders.keys())[-1]
-    print(f"\nCancelling ORDER#{order_to_cancel_id}...")
+    logger.info("\nCancelling ORDER#%s...", order_to_cancel_id)
     book.cancel_order(order_to_cancel_id)
-    print(book.get_order_book_depth())
+    logger.info(book.get_order_book_depth())

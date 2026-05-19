@@ -1,9 +1,12 @@
 import websocket, json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def on_message(ws, msg):
     data = json.loads(msg)
-    print(data.keys())
+    logger.debug("received binance message keys: %s", list(data.keys()))
     event_type = data["e"]
     event_time = data["E"]
     symbol = data["s"]
