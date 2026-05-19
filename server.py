@@ -83,6 +83,11 @@ app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=secrets.token_hex(32))
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+# Disable Jinja template caching to avoid template-cache key hashing issues
+try:
+    templates.env.cache_size = 0
+except Exception:
+    pass
 
 
 def normalize_username(username: str) -> str:

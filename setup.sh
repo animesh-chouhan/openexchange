@@ -80,7 +80,9 @@ if [[ -f "$SERVER_DIR/nginx.conf" ]]; then
   TARGET_ENABLED=/etc/nginx/sites-enabled
   $SUDO mkdir -p "$TARGET_AVAILABLE" "$TARGET_ENABLED"
   $SUDO cp "$SERVER_DIR/nginx.conf" "$TARGET_AVAILABLE/openexchange.conf"
+  # create both .conf and non-.conf symlink to support systems referencing either name
   $SUDO ln -sf "$TARGET_AVAILABLE/openexchange.conf" "$TARGET_ENABLED/openexchange.conf"
+  $SUDO ln -sf "$TARGET_AVAILABLE/openexchange.conf" "$TARGET_ENABLED/openexchange"
   echo "Testing nginx configuration"
   if $SUDO nginx -t; then
     echo "Reloading nginx"
