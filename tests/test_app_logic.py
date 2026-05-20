@@ -69,7 +69,7 @@ class AppLogicTest(unittest.TestCase):
     def test_login_registers_user_and_sets_session(self):
         request = self.request()
 
-        response = asyncio.run(main.login(request, username="Alice"))
+        response = main.login(request, username="Alice")
 
         self.assertIsInstance(response, RedirectResponse)
         self.assertEqual(response.headers["location"], "/user")
@@ -94,7 +94,7 @@ class AppLogicTest(unittest.TestCase):
         self.round.status = "finished"
         request = self.request()
 
-        response = asyncio.run(main.login(request, username="Bob"))
+        response = main.login(request, username="Bob")
 
         self.assertNotIn("username", request.session)
 

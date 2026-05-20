@@ -75,6 +75,8 @@ if command -v ufw >/dev/null 2>&1; then
   $SUDO ufw allow 80/tcp || true
   $SUDO ufw allow 443/tcp || true
   $SUDO ufw allow 8000/tcp || true
+  $SUDO ufw allow 9090/tcp || true
+  $SUDO ufw allow 3000/tcp || true
   $SUDO ufw --force enable || true
   $SUDO ufw status verbose || true
 else

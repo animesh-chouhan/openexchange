@@ -365,7 +365,7 @@ def get_template_context(request: Request, page_name: str):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
+def read_root(request: Request):
     if get_logged_in_user(request):
         return RedirectResponse(url="/user", status_code=302)
     return templates.TemplateResponse(
@@ -376,7 +376,7 @@ async def read_root(request: Request):
 
 
 @app.get("/login")
-async def login(request: Request, username: str | None = None):
+def login(request: Request, username: str | None = None):
     if username is None:
         return templates.TemplateResponse(
             request=request,
@@ -435,7 +435,7 @@ async def logout(request: Request):
 
 
 @app.get("/admin", response_class=HTMLResponse)
-async def read_admin(request: Request):
+def read_admin(request: Request):
     if not is_admin_authenticated(request):
         return templates.TemplateResponse(
             request=request,
@@ -520,7 +520,7 @@ def admin_seed_players(request: Request, payload: SeedPlayersRequest):
 
 
 @app.get("/user", response_class=HTMLResponse)
-async def read_user(request: Request):
+def read_user(request: Request):
     username = require_logged_in_user(request)
     if not username:
         return RedirectResponse(url="/", status_code=302)
