@@ -23,12 +23,23 @@ uv sync --all-groups
 systemctl restart "${SERVICE_NAME}.service"
 systemctl status "${SERVICE_NAME}.service" --no-pager
 
-# Reload nginx only if the config changed in this pull
-if git diff --name-only "$BEFORE" "$AFTER" | grep -q "^deploy/nginx.conf$"; then
-  if command -v nginx >/dev/null 2>&1 && nginx -t -q 2>/dev/null; then
-    echo "nginx config changed — reloading"
-    systemctl reload nginx
+# Always sync nginx config from repo and reload
+NGINX_AVAILABLE=/etc/nginx/sites-available/openexchange.conf
+NGINX_ENABLED=/etc/nginx/sites-enabled/openexchange
+cp "$REPO_DIR/deploy/nginx.conf" "$NGINX_AVAILABLE"
+ln -sf "$NGINX_AVAILABLE" "$NGINX_ENABLED"
+if nginx -t; then
+  systemctl reload nginx
+else
+  echo "nginx config test failed — not reloading" >&2
+  exit 1
+fi
+
+# Ensure TLS cert exists and is current
+if command -v certbot >/dev/null 2>&1; then
+  if [[ -d /etc/letsencrypt/live/stock.animeshchouhan.com ]]; then
+    certbot renew --quiet
   else
-    echo "nginx config changed but test failed — skipping reload" >&2
+    certbot --nginx -d stock.animeshchouhan.com
   fi
 fi
