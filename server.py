@@ -308,7 +308,9 @@ async def read_root(request: Request):
     if get_logged_in_user(request):
         return RedirectResponse(url="/user", status_code=302)
     return templates.TemplateResponse(
-        "index.html", get_template_context(request, "index")
+        request=request,
+        name="index.html",
+        context=get_template_context(request, "index"),
     )
 
 
@@ -316,13 +318,16 @@ async def read_root(request: Request):
 async def login(request: Request, username: str | None = None):
     if username is None:
         return templates.TemplateResponse(
-            "login.html", get_template_context(request, "login")
+            request=request,
+            name="login.html",
+            context=get_template_context(request, "login"),
         )
     normalized = validate_username(username)
     if not normalized:
         return templates.TemplateResponse(
-            "login.html",
-            {
+            request=request,
+            name="login.html",
+            context={
                 **get_template_context(request, "login"),
                 "error": f"Use 2-20 letters, numbers, underscores, or hyphens. Names starting with '{BOT_PREFIX}' are reserved for bots.",
                 "entered_username": username,
@@ -334,8 +339,9 @@ async def login(request: Request, username: str | None = None):
         existing_trader = sim.get_trader(normalized)
         if existing_trader is None or existing_trader.name != normalized:
             return templates.TemplateResponse(
-                "login.html",
-                {
+                request=request,
+                name="login.html",
+                context={
                     **get_template_context(request, "login"),
                     "error": "That name is already taken.",
                     "entered_username": username,
@@ -347,8 +353,9 @@ async def login(request: Request, username: str | None = None):
     success, error = add_player_to_waiting_round(trader.name)
     if not success:
         return templates.TemplateResponse(
-            "login.html",
-            {
+            request=request,
+            name="login.html",
+            context={
                 **get_template_context(request, "login"),
                 "error": error,
                 "entered_username": username,
@@ -370,10 +377,14 @@ async def logout(request: Request):
 async def read_admin(request: Request):
     if not is_admin_authenticated(request):
         return templates.TemplateResponse(
-            "admin_login.html", get_template_context(request, "admin_login")
+            request=request,
+            name="admin_login.html",
+            context=get_template_context(request, "admin_login"),
         )
     return templates.TemplateResponse(
-        "admin.html", get_template_context(request, "admin")
+        request=request,
+        name="admin.html",
+        context=get_template_context(request, "admin"),
     )
 
 
@@ -453,7 +464,9 @@ async def read_user(request: Request):
     if not username:
         return RedirectResponse(url="/", status_code=302)
     return templates.TemplateResponse(
-        "user.html", get_template_context(request, "user")
+        request=request,
+        name="user.html",
+        context=get_template_context(request, "user"),
     )
 
 
