@@ -11,16 +11,13 @@ services:
 
   grafana:
     image: grafana/grafana:latest
-    ports:
-      - "127.0.0.1:3000:3000"
+    network_mode: host
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
       - GF_SERVER_ROOT_URL=https://stock.animeshchouhan.com/grafana/
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
