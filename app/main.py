@@ -115,7 +115,8 @@ def normalize_username(username: str) -> str:
 
 
 def username_exists(username: str) -> bool:
-    return sim.get_trader(normalize_username(username)) is not None
+    normalized = normalize_username(username).lower()
+    return any(trader.name.lower() == normalized for trader in sim.traders)
 
 
 def validate_username(username: str) -> str | None:

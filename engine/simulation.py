@@ -136,7 +136,6 @@ class TradingSimulation:
             "Warren",
         ]
         self.traders = [Trader(names[i]) for i in range(num_traders)]
-        self._trader_index: dict[str, Trader] = {t.name.lower(): t for t in self.traders}
         self.market_maker = MarketMaker(self.book)
         self.running = False
         self.random_order_thread = None
@@ -215,17 +214,20 @@ class TradingSimulation:
 
     def get_trader(self, name):
         with self.trader_lock:
-            return self._trader_index.get(name.lower())
+            return next(
+                (trader for trader in self.traders if trader.name == name), None
+            )
 
     def register_trader(self, name, initial_cash=100000):
         with self.trader_lock:
-            existing = self._trader_index.get(name.lower())
-            if existing is not None:
-                return existing, False
+            trader = next(
+                (existing for existing in self.traders if existing.name == name), None
+            )
+            if trader is not None:
+                return trader, False
 
             trader = Trader(name, initial_cash=initial_cash)
             self.traders.append(trader)
-            self._trader_index[name.lower()] = trader
         self._leaderboard_dirty = True
         return trader, True
 
@@ -241,7 +243,6 @@ class TradingSimulation:
     def clear_traders(self):
         with self.trader_lock:
             self.traders = []
-            self._trader_index = {}
         self._leaderboard_dirty = True
 
     def trigger_random_orders(self, num_orders=5000, delay=0.1, trader_names=None):
