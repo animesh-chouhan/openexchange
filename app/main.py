@@ -251,6 +251,7 @@ def get_active_leaderboard_entries(limit: int | None = 10):
             "cash": trader.cash,
             "holdings": trader.holdings,
             "portfolio_value": trader.portfolio_value,
+            "pnl": trader.portfolio_value - trader.initial_cash,
         }
         for trader in leaderboard
     ]
@@ -283,6 +284,7 @@ def get_active_leaderboard_and_profile(username: str | None, limit: int = 14):
                     "cash": trader.cash,
                     "holdings": trader.holdings,
                     "portfolio_value": trader.portfolio_value,
+                    "pnl": trader.portfolio_value - trader.initial_cash,
                 }
             )
         if username and trader.name == username:
@@ -291,6 +293,7 @@ def get_active_leaderboard_and_profile(username: str | None, limit: int = 14):
                 "cash": trader.cash,
                 "holdings": trader.holdings,
                 "portfolio_value": trader.portfolio_value,
+                "pnl": trader.portfolio_value - trader.initial_cash,
                 "rank": index,
                 "total_players": total_players,
             }

@@ -14,15 +14,14 @@
 </head>
 
 <body class="page-admin">
-    <div class="page-shell">
-        <header class="hero">
-            <div class="hero-copy">
-                <!-- <p class="eyebrow">Admin view</p> -->
-                <h1>Admin View</h1>
-                <!-- <p class="hero-text">Track price action, liquidity, and trader rankings from a single market-ops dashboard.</p> -->
-            </div>
-            <div class="hero-status hero-status-compact">
-                <a class="mini-status nav-mini-status" href="/user">User trading page</a>
+    <nav class="topnav">
+        <div class="topnav-inner">
+            <a class="topnav-brand" href="/">
+                <span class="topnav-mark">OX</span>
+                <span class="topnav-brand-label">OpenExchange</span>
+            </a>
+            <div class="topnav-links">
+                <a class="mini-status nav-mini-status" href="/user">User view</a>
                 <div class="mini-status mini-status-live">
                     <span class="pulse"></span>
                     <span id="engine-status">Connecting</span>
@@ -34,17 +33,18 @@
                     <span class="mini-status-divider"></span>
                     <span id="game-timer">02:00</span>
                 </div>
-                <button type="button" id="admin-start-btn" class="mini-status nav-mini-status mini-status-button">Start
-                    Round</button>
-                <button type="button" id="admin-reset-btn" class="mini-status nav-mini-status mini-status-button">Reset
-                    Round</button>
-                <button type="button" id="admin-reset-all-btn"
-                    class="mini-status nav-mini-status mini-status-button">Reset
-                    All</button>
-                <button type="button" id="load-test-btn" class="mini-status nav-mini-status mini-status-button">Load
-                    Test</button>
-                <button type="button" id="admin-logout-btn" class="mini-status nav-mini-status mini-status-button">Lock
-                    Admin</button>
+                <button type="button" id="admin-start-btn" class="mini-status mini-status-button">Start Round</button>
+                <button type="button" id="admin-reset-btn" class="mini-status mini-status-button">Reset Round</button>
+                <button type="button" id="admin-reset-all-btn" class="mini-status mini-status-button">Reset All</button>
+                <button type="button" id="load-test-btn" class="mini-status mini-status-button">Load Test</button>
+                <button type="button" id="admin-logout-btn" class="mini-status mini-status-button">Lock Admin</button>
+            </div>
+        </div>
+    </nav>
+    <div class="page-shell">
+        <header class="hero">
+            <div class="hero-copy">
+                <h1>Admin View</h1>
             </div>
         </header>
 
@@ -76,11 +76,33 @@
                 <div class="panel-header">
                     <div>
                         <p class="panel-kicker">Market chart</p>
-                        <!-- <h2>Candlestick view</h2> -->
                     </div>
-                    <!-- <span class="panel-chip">1 second candles</span> -->
                 </div>
                 <div id="ohlc-chart" class="chart-surface"></div>
+            </section>
+
+            <section class="panel leaderboard-panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Leaderboard</h2>
+                    </div>
+                    <span class="panel-chip">Marked to market</span>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Trader</th>
+                                <th>Holdings</th>
+                                <th>Cash</th>
+                                <th>Portfolio</th>
+                                <th>P&amp;L</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body"></tbody>
+                    </table>
+                </div>
             </section>
 
             <section class="panel book-panel">
@@ -102,32 +124,15 @@
                     </div>
                 </div>
             </section>
-
-            <section class="panel leaderboard-panel">
-                <div class="panel-header">
-                    <div>
-                        <!-- <p class="panel-kicker">Rankings</p> -->
-                        <h2>Leaderboard</h2>
-                    </div>
-                    <span class="panel-chip">Marked to market</span>
-                </div>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Trader</th>
-                                <th>Holdings</th>
-                                <th>Cash</th>
-                                <th>Portfolio</th>
-                            </tr>
-                        </thead>
-                        <tbody id="leaderboard-body"></tbody>
-                    </table>
-                </div>
-            </section>
         </main>
     </div>
+
+    <footer class="site-footer">
+        <div class="site-footer-inner">
+            <a class="site-footer-brand" href="/">OpenExchange</a>
+            <span>made with ❤️ by <a class="site-footer-link" href="https://animesshchouhan.com" target="_blank" rel="noopener">Animesh Chouhan</a></span>
+        </div>
+    </footer>
 
     <script>
         window.__TRADERS__ = {{ game.active_players | tojson }};

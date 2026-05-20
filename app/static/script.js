@@ -24,6 +24,7 @@ const profilePortfolio = document.getElementById("profile-portfolio");
 const profileCash = document.getElementById("profile-cash");
 const profileHoldings = document.getElementById("profile-holdings");
 const profileRank = document.getElementById("profile-rank");
+const profilePnl = document.getElementById("profile-pnl");
 const topPortfolioValue = document.getElementById("top-portfolio-value");
 const topPortfolioSubtext = document.getElementById("top-portfolio-subtext");
 const gamePhase = document.getElementById("game-phase");
@@ -266,7 +267,7 @@ function renderLeaderboard(rows) {
         return;
     }
     if (!rows.length) {
-        const colspan = pageName === "admin" ? 5 : 4;
+        const colspan = pageName === "admin" ? 6 : 4;
         leaderboardBody.innerHTML = `<tr><td colspan="${colspan}">No active players yet.</td></tr>`;
         return;
     }
@@ -275,6 +276,16 @@ function renderLeaderboard(rows) {
         .map((trader, index) => {
             const holdingsClass = trader.holdings >= 0 ? "positive" : "negative";
             const rankCell = pageName === "admin" ? `<td data-label="Rank">#${index + 1}</td>` : "";
+            let pnlCell = "";
+            if (pageName === "admin" && trader.pnl !== undefined) {
+                const pnl = trader.pnl;
+                const pct = trader.portfolio_value - pnl !== 0
+                    ? ((pnl / (trader.portfolio_value - pnl)) * 100).toFixed(2)
+                    : "0.00";
+                const pnlClass = pnl >= 0 ? "positive" : "negative";
+                const sign = pnl >= 0 ? "+" : "";
+                pnlCell = `<td data-label="P&L" class="${pnlClass}">${sign}${formatCurrency(pnl)} (${sign}${pct}%)</td>`;
+            }
             return `
                 <tr>
                     ${rankCell}
@@ -282,6 +293,7 @@ function renderLeaderboard(rows) {
                     <td data-label="Holdings" class="${holdingsClass}">${trader.holdings}</td>
                     <td data-label="Cash">${formatCurrency(trader.cash)}</td>
                     <td data-label="Portfolio">${formatCurrency(trader.portfolio_value)}</td>
+                    ${pnlCell}
                 </tr>
             `;
         })
@@ -310,6 +322,19 @@ function renderUserProfile(profile) {
     }
     if (profileRank) {
         profileRank.textContent = rank ? `#${rank}` : "--";
+    }
+    if (profilePnl) {
+        if (profile && profile.pnl !== null && profile.pnl !== undefined) {
+            const pnl = profile.pnl;
+            const initialCash = profile.portfolio_value - pnl;
+            const pct = initialCash !== 0 ? ((pnl / initialCash) * 100).toFixed(2) : "0.00";
+            const sign = pnl >= 0 ? "+" : "";
+            profilePnl.textContent = `${sign}${formatCurrency(pnl)} (${sign}${pct}%)`;
+            profilePnl.className = pnl >= 0 ? "positive" : "negative";
+        } else {
+            profilePnl.textContent = "--";
+            profilePnl.className = "";
+        }
     }
     if (topPortfolioValue) {
         topPortfolioValue.textContent = profile && profile.portfolio_value !== null ? formatCurrency(profile.portfolio_value) : "--";

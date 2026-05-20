@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 class Trader:
     def __init__(self, name, initial_cash=100000):
         self.name = name
+        self.initial_cash = initial_cash
         self.cash = initial_cash
         self.holdings = 0  # Number of shares
         self.portfolio_value = initial_cash

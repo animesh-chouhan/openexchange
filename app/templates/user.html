@@ -14,17 +14,22 @@
 </head>
 
 <body class="page-user">
+    <nav class="topnav">
+        <div class="topnav-inner">
+            <a class="topnav-brand" href="/">
+                <span class="topnav-mark">OX</span>
+                <span class="topnav-brand-label">OpenExchange</span>
+            </a>
+        </div>
+    </nav>
     <div class="page-shell">
         <header class="hero">
             <div class="hero-copy">
                 <p class="eyebrow">2 minute round</p>
                 <h1><span id="hero-trader-name">{{ current_user or "Trader" }}</span>'s<span
                         class="hero-title-suffix">dashboard</span></h1>
-                <!-- <p class="hero-text">Trade fast, watch the tape, and finish the round with the highest marked-to-market
-                    portfolio value.</p> -->
             </div>
             <div class="hero-status hero-status-compact">
-                <!-- <a class="mini-status nav-mini-status" href="/admin">Admin console</a> -->
                 <div class="mini-status mini-status-live">
                     <span class="pulse"></span>
                     <span id="engine-status">Connecting</span>
@@ -150,12 +155,24 @@
                         <span>Rank</span>
                         <strong id="profile-rank">--</strong>
                     </article>
+                    <article class="profile-card">
+                        <span>P&amp;L</span>
+                        <strong id="profile-pnl">--</strong>
+                    </article>
                 </div>
             </section>
 
 
         </main>
     </div>
+
+    <footer class="site-footer">
+        <div class="site-footer-inner">
+            <a class="site-footer-brand" href="/">OpenExchange</a>
+            <span>made with ❤️ by <a class="site-footer-link" href="https://animeshchouhan.com" target="_blank"
+                    rel="noopener">Animesh Chouhan</a></span>
+        </div>
+    </footer>
 
     <script>
         window.__TRADERS__ = {{ game.active_players | tojson }};
