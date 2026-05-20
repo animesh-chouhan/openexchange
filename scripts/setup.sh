@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# When run under sudo, $HOME becomes /root and ~/.local/bin is stripped from PATH.
+# Re-add the invoking user's local bin so uv is findable.
+[[ -n "${SUDO_USER:-}" ]] && export PATH="/home/${SUDO_USER}/.local/bin:${PATH}"
+export PATH="${HOME}/.local/bin:${PATH}"
+
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 DEPLOY_DIR="$REPO_DIR/deploy"
 
@@ -10,7 +15,6 @@ cd "$REPO_DIR"
 if ! command -v uv >/dev/null 2>&1; then
   echo "uv not found — installing..."
   curl -LsSf https://astral.sh/uv/install.sh | sh
-  export PATH="$HOME/.local/bin:$PATH"
 fi
 
 echo "uv $(uv --version)"

@@ -2,6 +2,11 @@
 
 set -euo pipefail
 
+# When run under sudo, $HOME becomes /root and ~/.local/bin is stripped from PATH.
+# Re-add the invoking user's local bin so uv is findable.
+[[ -n "${SUDO_USER:-}" ]] && export PATH="/home/${SUDO_USER}/.local/bin:${PATH}"
+export PATH="${HOME}/.local/bin:${PATH}"
+
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SERVICE_NAME="openexchange"
 
