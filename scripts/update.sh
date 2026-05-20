@@ -11,5 +11,6 @@ CURRENT_BRANCH="$(git branch --show-current)"
 
 git fetch origin
 git pull --ff-only origin "$CURRENT_BRANCH"
+uv sync --all-groups
 systemctl restart "${SERVICE_NAME}.service"
 systemctl status "${SERVICE_NAME}.service" --no-pager

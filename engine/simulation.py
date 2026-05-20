@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class Trader:
-    def __init__(self, name, initial_cash=10000):
+    def __init__(self, name, initial_cash=100000):
         self.name = name
         self.cash = initial_cash
         self.holdings = 0  # Number of shares
@@ -41,7 +41,7 @@ class Trader:
                 self.holdings += filled
                 self.cash -= filled * ltp
             else:
-                logger.warning("%s: Insufficient cash for buy", self.name)
+                logger.debug("%s: Insufficient cash for buy", self.name)
         else:  # Allow unlimited short sells
             self.holdings -= filled
             self.cash += filled * ltp
@@ -140,6 +140,8 @@ class TradingSimulation:
         self.running = False
         self.random_order_thread = None
         self.trader_lock = threading.Lock()
+        self._leaderboard_cache = []
+        self._leaderboard_dirty = True
 
     def start_simulation(self):
         # Place initial liquidity
@@ -174,6 +176,7 @@ class TradingSimulation:
             # Update portfolios
             for trader in self.traders:
                 trader.update_portfolio(ltp)
+            self._leaderboard_dirty = True
 
             time.sleep(1)  # Update every second
 
@@ -202,7 +205,12 @@ class TradingSimulation:
             trader.update_portfolio(final_price)
 
     def get_leaderboard(self):
-        return sorted(self.traders, key=lambda t: t.portfolio_value, reverse=True)
+        if self._leaderboard_dirty:
+            self._leaderboard_cache = sorted(
+                self.traders, key=lambda t: t.portfolio_value, reverse=True
+            )
+            self._leaderboard_dirty = False
+        return self._leaderboard_cache
 
     def get_trader(self, name):
         with self.trader_lock:
@@ -210,7 +218,7 @@ class TradingSimulation:
                 (trader for trader in self.traders if trader.name == name), None
             )
 
-    def register_trader(self, name, initial_cash=10000):
+    def register_trader(self, name, initial_cash=100000):
         with self.trader_lock:
             trader = next(
                 (existing for existing in self.traders if existing.name == name), None
@@ -220,19 +228,22 @@ class TradingSimulation:
 
             trader = Trader(name, initial_cash=initial_cash)
             self.traders.append(trader)
-            return trader, True
+        self._leaderboard_dirty = True
+        return trader, True
 
-    def reset_traders(self, initial_cash=10000):
+    def reset_traders(self, initial_cash=100000):
         with self.trader_lock:
             for trader in self.traders:
                 trader.cash = initial_cash
                 trader.holdings = 0
                 trader.portfolio_value = initial_cash
                 trader.orders = {}
+        self._leaderboard_dirty = True
 
     def clear_traders(self):
         with self.trader_lock:
             self.traders = []
+        self._leaderboard_dirty = True
 
     def trigger_random_orders(self, num_orders=5000, delay=0.1, trader_names=None):
         if self.random_order_thread and self.random_order_thread.is_alive():

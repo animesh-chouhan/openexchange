@@ -415,25 +415,12 @@ function updateChart(candles) {
 }
 
 async function fetchDashboardData() {
-    const [ohlcResponse, orderBookResponse, leaderboardResponse, gameResponse] = await Promise.all([
-        fetch("/ohlc"),
-        fetch("/orderbook"),
-        fetch("/leaderboard"),
-        fetch("/game"),
-    ]);
-
-    if (!ohlcResponse.ok || !orderBookResponse.ok || !leaderboardResponse.ok || !gameResponse.ok) {
+    const response = await fetch("/state");
+    if (!response.ok) {
         throw new Error("Failed to fetch market data");
     }
-
-    const [candles, orderBook, leaderboard, game] = await Promise.all([
-        ohlcResponse.json(),
-        orderBookResponse.json(),
-        leaderboardResponse.json(),
-        gameResponse.json(),
-    ]);
-
-    return { candles, orderBook, leaderboard, game };
+    const { ohlc, orderbook, leaderboard, game } = await response.json();
+    return { candles: ohlc, orderBook: orderbook, leaderboard, game };
 }
 
 async function refreshDashboard() {

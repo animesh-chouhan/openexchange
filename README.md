@@ -4,10 +4,16 @@ OpenExchange is an educational order-matching engine and real-time trading game.
 
 ## Quick Start
 
+Install [uv](https://docs.astral.sh/uv/) if you don't have it:
+
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then:
+
+```bash
+uv sync
 ./run.sh
 ```
 
@@ -20,7 +26,7 @@ http://127.0.0.1:8000
 You can also run the app directly:
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 ## Project Layout
@@ -66,7 +72,7 @@ Run locally:
 Run tests:
 
 ```bash
-python -m unittest discover -s tests
+uv run pytest
 ```
 
 The test suite covers:
@@ -80,13 +86,13 @@ The test suite covers:
 Run the simulation visualizer:
 
 ```bash
-python -m engine.simulation
+uv run python -m engine.simulation
 ```
 
 Run the performance script:
 
 ```bash
-python perf_test.py
+uv run python perf_test.py
 ```
 
 Deploy/update on the server:

@@ -6,7 +6,9 @@ import os
 from pathlib import Path
 
 import pandas as pd
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
+from prometheus_client import Counter, Gauge, Histogram
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -73,6 +75,10 @@ sim = TradingSimulation(num_traders=0)
 sim.start_simulation()
 game_round = GameRound()
 
+_ohlc_cache: list = []
+_ohlc_cache_ts: float = 0.0
+_ohlc_lock = threading.Lock()
+
 import logging
 
 # Configure logging format and level for the whole app
@@ -91,6 +97,17 @@ try:
     templates.env.cache_size = 0
 except Exception:
     pass
+
+# --- Prometheus metrics ---
+active_users_gauge = Gauge("openexchange_active_users", "Active players in current round")
+round_running_gauge = Gauge("openexchange_round_running", "1 if round is running, 0 otherwise")
+orders_counter = Counter("openexchange_orders", "Total orders placed", ["side"])
+ohlc_rebuild_histogram = Histogram(
+    "openexchange_ohlc_rebuild_seconds",
+    "Duration of OHLC pandas rebuild (cache misses only)",
+    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0],
+)
+Instrumentator(excluded_handlers=["/metrics"]).instrument(app).expose(app)
 
 
 def normalize_username(username: str) -> str:
@@ -111,23 +128,46 @@ def validate_username(username: str) -> str | None:
     return normalized
 
 
-def sync_game_round():
+_round_timer: threading.Timer | None = None
+
+# Round expiry is timer-driven: no per-request sync. _expire_round fires once at
+# ends_at; reset functions cancel it so a stale timer can't flip a new round.
+
+def _expire_round():
     with game_round.lock:
-        if game_round.status == "running" and game_round.ends_at is not None:
-            if time.time() >= game_round.ends_at:
-                game_round.status = "finished"
+        if game_round.status == "running":
+            game_round.status = "finished"
+    round_running_gauge.set(0)
+
+
+def _schedule_round_expiry(delay: float):
+    global _round_timer
+    if _round_timer is not None:
+        _round_timer.cancel()
+    _round_timer = threading.Timer(delay, _expire_round)
+    _round_timer.daemon = True
+    _round_timer.start()
 
 
 def reset_round_state():
+    global _round_timer
+    if _round_timer is not None:
+        _round_timer.cancel()
+        _round_timer = None
     with game_round.lock:
         game_round.status = "waiting"
         game_round.started_at = None
         game_round.ends_at = None
         game_round.round_id += 1
     sim.reset_traders()
+    round_running_gauge.set(0)
 
 
 def reset_all_state():
+    global _round_timer
+    if _round_timer is not None:
+        _round_timer.cancel()
+        _round_timer = None
     with game_round.lock:
         game_round.status = "waiting"
         game_round.started_at = None
@@ -135,23 +175,21 @@ def reset_all_state():
         game_round.active_players = set()
         game_round.round_id += 1
     sim.clear_traders()
+    active_users_gauge.set(0)
+    round_running_gauge.set(0)
 
 
 def add_player_to_waiting_round(username: str):
     with game_round.lock:
         if game_round.status == "finished":
-            game_round.status = "waiting"
-            game_round.started_at = None
-            game_round.ends_at = None
-            game_round.active_players = set()
-            game_round.round_id += 1
-            sim.reset_traders()
-
+            return False, "Round has finished. Wait for the admin to start the next game."
         if game_round.status == "running" and username not in game_round.active_players:
             return False, "A round is already running. Wait for the next 2-minute game."
 
         game_round.active_players.add(username)
-        return True, None
+        count = len(game_round.active_players)
+    active_users_gauge.set(count)
+    return True, None
 
 
 def start_round_if_needed():
@@ -164,6 +202,8 @@ def start_round_if_needed():
         game_round.status = "running"
         game_round.started_at = time.time()
         game_round.ends_at = game_round.started_at + GAME_DURATION_SECONDS
+    _schedule_round_expiry(GAME_DURATION_SECONDS)
+    round_running_gauge.set(1)
 
 
 def start_round():
@@ -176,7 +216,9 @@ def start_round():
         game_round.status = "running"
         game_round.started_at = time.time()
         game_round.ends_at = game_round.started_at + GAME_DURATION_SECONDS
-        return True, None
+    _schedule_round_expiry(GAME_DURATION_SECONDS)
+    round_running_gauge.set(1)
+    return True, None
 
 
 def get_logged_in_user(request: Request) -> str | None:
@@ -188,12 +230,10 @@ def is_admin_authenticated(request: Request) -> bool:
 
 
 def require_logged_in_user(request: Request) -> str | None:
-    sync_game_round()
     return get_logged_in_user(request)
 
 
 def get_active_leaderboard_entries(limit: int | None = 10):
-    sync_game_round()
     snapshot = game_round.snapshot()
     active_names = set(snapshot["active_players"])
     leaderboard = sim.get_leaderboard()
@@ -220,23 +260,33 @@ def get_active_leaderboard():
     return get_active_leaderboard_entries(limit=14)
 
 
-def get_active_player_profile(username: str | None):
-    if not username:
-        return None
-
-    sync_game_round()
+def get_active_leaderboard_and_profile(username: str | None, limit: int = 14):
+    """Single pass over the active leaderboard: returns (leaderboard, profile)."""
     snapshot = game_round.snapshot()
     active_names = set(snapshot["active_players"])
-    leaderboard = sim.get_leaderboard()
-    if active_names:
-        leaderboard = [trader for trader in leaderboard if trader.name in active_names]
-    else:
-        leaderboard = []
 
-    total_players = len(leaderboard)
-    for index, trader in enumerate(leaderboard, start=1):
-        if trader.name == username:
-            return {
+    ranked = (
+        [t for t in sim.get_leaderboard() if t.name in active_names]
+        if active_names
+        else []
+    )
+    total_players = len(ranked)
+
+    leaderboard_out = []
+    profile = None
+
+    for index, trader in enumerate(ranked, start=1):
+        if index <= limit:
+            leaderboard_out.append(
+                {
+                    "name": trader.name,
+                    "cash": trader.cash,
+                    "holdings": trader.holdings,
+                    "portfolio_value": trader.portfolio_value,
+                }
+            )
+        if username and trader.name == username:
+            profile = {
                 "name": trader.name,
                 "cash": trader.cash,
                 "holdings": trader.holdings,
@@ -244,19 +294,28 @@ def get_active_player_profile(username: str | None):
                 "rank": index,
                 "total_players": total_players,
             }
+        if index >= limit and (profile is not None or not username):
+            break
 
-    return {
-        "name": username,
-        "cash": None,
-        "holdings": None,
-        "portfolio_value": None,
-        "rank": None,
-        "total_players": total_players,
-    }
+    if username and profile is None:
+        profile = {
+            "name": username,
+            "cash": None,
+            "holdings": None,
+            "portfolio_value": None,
+            "rank": None,
+            "total_players": total_players,
+        }
+
+    return leaderboard_out, profile
+
+
+def get_active_player_profile(username: str | None):
+    _, profile = get_active_leaderboard_and_profile(username)
+    return profile
 
 
 def get_active_player_names():
-    sync_game_round()
     return list(game_round.snapshot()["active_players"])
 
 
@@ -284,7 +343,6 @@ def seed_bot_players(count: int, prefix: str):
 
 
 def get_template_context(request: Request, page_name: str):
-    sync_game_round()
     game_snapshot = game_round.snapshot()
     # JSON-safe snapshot for templates/inline JS (avoid unhashable/complex objects)
     game_json = {
@@ -394,7 +452,7 @@ async def read_admin(request: Request):
 @app.post("/admin/login")
 async def admin_login(request: Request, payload: AdminPasswordRequest):
     if payload.password != ADMIN_PASSWORD:
-        return {"error": "Invalid admin password"}
+        raise HTTPException(status_code=401, detail="Invalid admin password")
     request.session["is_admin"] = True
     return {"message": "Admin authenticated"}
 
@@ -408,7 +466,7 @@ async def admin_logout(request: Request):
 @app.post("/admin/round/reset")
 def admin_reset_round(request: Request):
     if not is_admin_authenticated(request):
-        return {"error": "Admin access required"}
+        raise HTTPException(status_code=403, detail="Admin access required")
 
     reset_round_state()
     return {"message": "Round reset", "game": game_round.snapshot()}
@@ -417,7 +475,7 @@ def admin_reset_round(request: Request):
 @app.post("/admin/reset-all")
 def admin_reset_all(request: Request):
     if not is_admin_authenticated(request):
-        return {"error": "Admin access required"}
+        raise HTTPException(status_code=403, detail="Admin access required")
 
     reset_all_state()
     return {
@@ -429,7 +487,7 @@ def admin_reset_all(request: Request):
 @app.post("/admin/round/start")
 def admin_start_round(request: Request):
     if not is_admin_authenticated(request):
-        return {"error": "Admin access required"}
+        raise HTTPException(status_code=403, detail="Admin access required")
 
     started, error = start_round()
     if not started:
@@ -441,7 +499,7 @@ def admin_start_round(request: Request):
 @app.post("/admin/players/seed")
 def admin_seed_players(request: Request, payload: SeedPlayersRequest):
     if not is_admin_authenticated(request):
-        return {"error": "Admin access required"}
+        raise HTTPException(status_code=403, detail="Admin access required")
     if payload.count <= 0:
         return {"error": "count must be greater than zero"}
     if payload.count > 500:
@@ -476,11 +534,11 @@ async def read_user(request: Request):
 @app.get("/game")
 def get_game_state(request: Request):
     username = get_logged_in_user(request)
-    sync_game_round()
+    leaderboard, profile = get_active_leaderboard_and_profile(username)
     snapshot = game_round.snapshot()
     snapshot["current_user"] = username
-    snapshot["leaderboard"] = get_active_leaderboard()
-    snapshot["current_user_profile"] = get_active_player_profile(username)
+    snapshot["leaderboard"] = leaderboard
+    snapshot["current_user_profile"] = profile
     return snapshot
 
 
@@ -494,7 +552,6 @@ def place_order(order: OrderRequest, request: Request):
     if order.quantity <= 0:
         return {"error": "quantity must be greater than zero"}
 
-    sync_game_round()
     snapshot = game_round.snapshot()
     if username not in snapshot["active_players"]:
         return {"error": "You are not registered in the current round"}
@@ -507,11 +564,14 @@ def place_order(order: OrderRequest, request: Request):
         return {"error": "Trader not found"}
 
     trader.place_market_order(order.side, order.quantity, sim.book)
+    orders_counter.labels(side=order.side).inc()
     return {"message": "Order placed successfully", "game": game_round.snapshot()}
 
 
 @app.post("/orders/random")
-def trigger_random_orders(request: RandomOrderRequest):
+def trigger_random_orders(http_request: Request, request: RandomOrderRequest):
+    if not is_admin_authenticated(http_request):
+        raise HTTPException(status_code=403, detail="Admin access required")
     if request.num_orders <= 0:
         return {"error": "num_orders must be greater than zero"}
     if request.delay < 0:
@@ -551,23 +611,16 @@ def trigger_random_orders(request: RandomOrderRequest):
     }
 
 
-@app.get("/leaderboard")
-def get_leaderboard():
-    return get_active_leaderboard()
-
-
-@app.get("/orderbook")
-def get_order_book():
+def _build_orderbook():
+    depth = sim.book.get_order_book_depth()
     return {
         "bids": [
             {"price": str(price), "quantity": quantity}
-            for price, quantity in reversed(
-                sim.book.get_order_book_depth()["buy"].items()
-            )
+            for price, quantity in reversed(depth["buy"].items())
         ],
         "asks": [
             {"price": str(price), "quantity": quantity}
-            for price, quantity in sim.book.get_order_book_depth()["sell"].items()
+            for price, quantity in depth["sell"].items()
         ],
         "last_trading_price": sim.book.last_trading_price,
         "best_bid": sim.book.best_bid,
@@ -575,43 +628,126 @@ def get_order_book():
     }
 
 
+def _build_ohlc():
+    global _ohlc_cache, _ohlc_cache_ts
+    now = time.time()
+    if now - _ohlc_cache_ts < 1.0:
+        return _ohlc_cache
+    with _ohlc_lock:
+        if now - _ohlc_cache_ts < 1.0:  # another thread rebuilt while we waited
+            return _ohlc_cache
+
+        trades = (
+            list(sim.book.trades.values())
+            if isinstance(sim.book.trades, dict)
+            else sim.book.trades
+        )
+        if not trades:
+            _ohlc_cache, _ohlc_cache_ts = [], now
+            return _ohlc_cache
+
+        df = pd.DataFrame(
+            [
+                {"time": t.timestamp, "price": float(t.price), "volume": t.volume}
+                for t in trades
+            ]
+        )
+        if df.empty:
+            _ohlc_cache, _ohlc_cache_ts = [], now
+            return _ohlc_cache
+
+        with ohlc_rebuild_histogram.time():
+            df["time"] = pd.to_datetime(df["time"], unit="s")
+            df.set_index("time", inplace=True)
+            ohlc = df["price"].resample("1s").ohlc()
+            ohlc["volume"] = df["volume"].resample("1s").sum()
+            ohlc = ohlc.dropna().reset_index()
+            ohlc["time"] = ohlc["time"].apply(lambda v: int(v.timestamp()))
+            _ohlc_cache = ohlc.to_dict(orient="records")
+
+        _ohlc_cache_ts = now
+    return _ohlc_cache
+
+
+def get_full_state(username: str | None):
+    leaderboard, profile = get_active_leaderboard_and_profile(username)
+    snapshot = game_round.snapshot()
+    snapshot["current_user"] = username
+    snapshot["leaderboard"] = leaderboard
+    snapshot["current_user_profile"] = profile
+    return {
+        "game": snapshot,
+        "orderbook": _build_orderbook(),
+        "leaderboard": leaderboard,
+        "ohlc": _build_ohlc(),
+    }
+
+
+@app.get("/state")
+def get_state(request: Request):
+    username = get_logged_in_user(request)
+    return get_full_state(username)
+
+
+@app.get("/leaderboard")
+def get_leaderboard():
+    return get_active_leaderboard()
+
+
+@app.get("/orderbook")
+def get_order_book():
+    return _build_orderbook()
+
+
 @app.get("/ohlc")
 def get_ohlc_data():
-    if not sim.book.trades:
-        return []
+    return _build_ohlc()
 
-    trades = (
-        list(sim.book.trades.values())
-        if isinstance(sim.book.trades, dict)
-        else sim.book.trades
+
+@app.get("/metrics/json")
+def metrics_json():
+    from prometheus_client import REGISTRY
+    result = {
+        "active_users": 0, "round_running": 0,
+        "orders": {"buy": 0, "sell": 0},
+        "http_requests_total": 0,
+        "http_duration_sum": 0.0, "http_duration_count": 0.0,
+        "cpu_seconds": 0.0, "memory_bytes": 0.0,
+        "ohlc_rebuild_sum": 0.0, "ohlc_rebuild_count": 0.0,
+    }
+    for metric in REGISTRY.collect():
+        for s in metric.samples:
+            n = s.name
+            if n == "openexchange_active_users":
+                result["active_users"] = s.value
+            elif n == "openexchange_round_running":
+                result["round_running"] = s.value
+            elif n == "openexchange_orders_total":
+                result["orders"][s.labels.get("side", "unknown")] = s.value
+            elif n == "http_requests_total":
+                result["http_requests_total"] += s.value
+            elif n == "http_request_duration_seconds_sum":
+                result["http_duration_sum"] += s.value
+            elif n == "http_request_duration_seconds_count":
+                result["http_duration_count"] += s.value
+            elif n == "process_cpu_seconds_total":
+                result["cpu_seconds"] = s.value
+            elif n == "process_resident_memory_bytes":
+                result["memory_bytes"] = s.value
+            elif n == "openexchange_ohlc_rebuild_seconds_sum":
+                result["ohlc_rebuild_sum"] = s.value
+            elif n == "openexchange_ohlc_rebuild_seconds_count":
+                result["ohlc_rebuild_count"] = s.value
+    return result
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def metrics_dashboard(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="metrics_dashboard.html",
+        context={},
     )
-
-    df = pd.DataFrame(
-        [
-            {
-                "time": trade.timestamp,
-                "price": float(trade.price),
-                "volume": trade.volume,
-            }
-            for trade in trades
-        ]
-    )
-
-    if df.empty:
-        return []
-
-    df["time"] = pd.to_datetime(df["time"], unit="s")
-    df.set_index("time", inplace=True)
-
-    ohlc = df["price"].resample("1s").ohlc()
-    volume = df["volume"].resample("1s").sum()
-    ohlc["volume"] = volume
-    ohlc = ohlc.dropna()
-
-    ohlc = ohlc.reset_index()
-    ohlc["time"] = ohlc["time"].apply(lambda value: int(value.timestamp()))
-
-    return ohlc.to_dict(orient="records")
 
 
 @app.on_event("shutdown")

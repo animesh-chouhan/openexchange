@@ -2,46 +2,20 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-VENV_DIR="$REPO_DIR/.venv"
-PYTHON="${PYTHON:-python3}"
 DEPLOY_DIR="$REPO_DIR/deploy"
 
 cd "$REPO_DIR"
 
-echo "Using python=$PYTHON venv=$VENV_DIR deploy_dir=$DEPLOY_DIR"
-
-if ! command -v "$PYTHON" >/dev/null 2>&1; then
-  echo "Error: $PYTHON not found on PATH." >&2
-  exit 2
+# Install uv if not present
+if ! command -v uv >/dev/null 2>&1; then
+  echo "uv not found — installing..."
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  export PATH="$HOME/.local/bin:$PATH"
 fi
 
-echo "Checking Python version..."
-PYVER=$("$PYTHON" -c 'import sys; print("%d.%d" % sys.version_info[:2])')
-echo "Python version: $PYVER"
-
-if [[ -d "$VENV_DIR" ]]; then
-  echo "Virtualenv already exists at $VENV_DIR. Reusing it."
-else
-  echo "Creating virtualenv in $VENV_DIR"
-  "$PYTHON" -m venv "$VENV_DIR"
-fi
-
-echo "Activating virtualenv"
-# shellcheck disable=SC1091
-source "$VENV_DIR/bin/activate"
-
-echo "Upgrading pip, setuptools, wheel"
-pip install --upgrade pip setuptools wheel
-
-if [[ -f requirements.txt ]]; then
-  echo "Installing from requirements.txt"
-  pip install -r requirements.txt
-fi
-
-if [[ -f requirements-dev.txt ]]; then
-  echo "Installing developer requirements from requirements-dev.txt"
-  pip install -r requirements-dev.txt
-fi
+echo "uv $(uv --version)"
+echo "Syncing dependencies (uv will install Python 3.14 if needed)..."
+uv sync --all-groups
 
 SUDO=""
 if [[ $EUID -ne 0 ]]; then

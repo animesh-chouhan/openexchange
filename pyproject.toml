@@ -1,0 +1,28 @@
+[project]
+name = "openexchange"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi",
+    "itsdangerous",
+    "jinja2",
+    "locust>=2.44.0",
+    "matplotlib",
+    "mplfinance",
+    "pandas",
+    "pydantic",
+    "sortedcontainers",
+    "prometheus-fastapi-instrumentator",
+    "uvicorn[standard]",
+    "websocket-client",
+]
+
+[dependency-groups]
+dev = [
+    "flake8",
+    "pytest",
+]
+
+[tool.uv]
+package = false
+python-preference = "only-system"

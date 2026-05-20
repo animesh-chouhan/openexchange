@@ -74,7 +74,48 @@ class TradingSimulationTest(unittest.TestCase):
         alice.portfolio_value = 100
         bob.portfolio_value = 200
 
-        self.assertEqual([trader.name for trader in self.sim.get_leaderboard()], ["Bob", "Alice"])
+        self.assertEqual(
+            [trader.name for trader in self.sim.get_leaderboard()], ["Bob", "Alice"]
+        )
+
+    def test_leaderboard_is_cached_between_calls(self):
+        alice, _ = self.sim.register_trader("Alice")
+        alice.portfolio_value = 100
+
+        first = self.sim.get_leaderboard()
+        second = self.sim.get_leaderboard()
+
+        self.assertIs(first, second)
+
+    def test_leaderboard_cache_invalidated_after_register(self):
+        alice, _ = self.sim.register_trader("Alice")
+        alice.portfolio_value = 100
+        first = self.sim.get_leaderboard()
+
+        bob, _ = self.sim.register_trader("Bob")
+        bob.portfolio_value = 200
+
+        second = self.sim.get_leaderboard()
+        self.assertIsNot(first, second)
+        self.assertEqual([t.name for t in second], ["Bob", "Alice"])
+
+    def test_leaderboard_cache_invalidated_after_reset(self):
+        alice, _ = self.sim.register_trader("Alice")
+        alice.portfolio_value = 500
+        _ = self.sim.get_leaderboard()
+
+        self.sim.reset_traders(initial_cash=100000)
+
+        leaderboard = self.sim.get_leaderboard()
+        self.assertEqual(leaderboard[0].portfolio_value, 100000)
+
+    def test_leaderboard_cache_invalidated_after_clear(self):
+        self.sim.register_trader("Alice")
+        _ = self.sim.get_leaderboard()
+
+        self.sim.clear_traders()
+
+        self.assertEqual(self.sim.get_leaderboard(), [])
 
     def test_random_order_burst_refuses_second_concurrent_run(self):
         self.sim.register_trader("Alice", initial_cash=1_000_000)

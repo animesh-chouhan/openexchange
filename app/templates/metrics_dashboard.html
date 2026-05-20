@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OpenExchange — Metrics</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #111827; color: #f3f4f6; font-family: system-ui, sans-serif; padding: 20px; }
+    h1 { font-size: 1.25rem; font-weight: 600; margin-bottom: 16px; color: #e5e7eb; }
+    h1 span { font-size: 0.75rem; font-weight: 400; color: #6b7280; margin-left: 8px; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    .stat { background: #1f2937; border: 1px solid #374151; border-radius: 8px; padding: 16px 20px; }
+    .stat .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; margin-bottom: 6px; }
+    .stat .value { font-size: 1.8rem; font-weight: 700; }
+    .stat.green .value { color: #10b981; }
+    .stat.blue  .value { color: #3b82f6; }
+    .stat.yellow .value { color: #f59e0b; }
+    .stat.red   .value { color: #ef4444; }
+
+    .charts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .chart-card { background: #1f2937; border: 1px solid #374151; border-radius: 8px; padding: 16px; }
+    .chart-card h2 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; margin-bottom: 10px; }
+    .chart-card canvas { height: 140px !important; }
+  </style>
+</head>
+<body>
+  <h1>OpenExchange <span id="ts"></span></h1>
+
+  <div class="stats">
+    <div class="stat green">  <div class="label">Active Users</div>  <div class="value" id="s-users">—</div>  </div>
+    <div class="stat" id="s-round-card">  <div class="label">Round</div>  <div class="value" id="s-round">—</div>  </div>
+    <div class="stat blue">   <div class="label">Req / s</div>         <div class="value" id="s-rps">—</div>   </div>
+    <div class="stat yellow"> <div class="label">Avg Latency</div>     <div class="value" id="s-lat">—</div>   </div>
+  </div>
+
+  <div class="charts">
+    <div class="chart-card"><h2>Request Rate (req/s)</h2><canvas id="c-rps"></canvas></div>
+    <div class="chart-card"><h2>Avg Response Latency (ms)</h2><canvas id="c-lat"></canvas></div>
+    <div class="chart-card"><h2>Orders / sec</h2><canvas id="c-orders"></canvas></div>
+    <div class="chart-card"><h2>CPU %</h2><canvas id="c-cpu"></canvas></div>
+    <div class="chart-card"><h2>Memory (MB)</h2><canvas id="c-mem"></canvas></div>
+    <div class="chart-card"><h2>OHLC Rebuild (ms p95 approx avg)</h2><canvas id="c-ohlc"></canvas></div>
+  </div>
+
+<script>
+const MAX = 60;
+const history = [];
+const LABELS = Array(MAX).fill('');
+
+const CHART_DEFAULTS = {
+  responsive: true, maintainAspectRatio: false, animation: false,
+  interaction: { mode: 'index', intersect: false },
+  scales: {
+    x: { display: false },
+    y: { grid: { color: 'rgba(255,255,255,0.07)' }, ticks: { color: '#6b7280', font: { size: 10 } }, beginAtZero: true }
+  },
+  plugins: { legend: { labels: { color: '#9ca3af', font: { size: 10 }, boxWidth: 10 } } }
+};
+
+function mkChart(id, datasets) {
+  return new Chart(document.getElementById(id), {
+    type: 'line',
+    data: { labels: LABELS, datasets: datasets.map(d => ({
+      ...d, data: Array(MAX).fill(null),
+      fill: true, tension: 0.3, pointRadius: 0, borderWidth: 1.5,
+      backgroundColor: d.borderColor.replace(')', ', 0.08)').replace('rgb', 'rgba'),
+    }))},
+    options: CHART_DEFAULTS,
+  });
+}
+
+const charts = {
+  rps:    mkChart('c-rps',    [{ label: 'req/s',   borderColor: 'rgb(59,130,246)'  }]),
+  lat:    mkChart('c-lat',    [{ label: 'ms',       borderColor: 'rgb(245,158,11)'  }]),
+  orders: mkChart('c-orders', [
+    { label: 'buy',  borderColor: 'rgb(16,185,129)'  },
+    { label: 'sell', borderColor: 'rgb(239,68,68)'   },
+  ]),
+  cpu:    mkChart('c-cpu',    [{ label: 'CPU %',    borderColor: 'rgb(139,92,246)'  }]),
+  mem:    mkChart('c-mem',    [{ label: 'MB',       borderColor: 'rgb(14,165,233)'  }]),
+  ohlc:   mkChart('c-ohlc',   [{ label: 'ms',       borderColor: 'rgb(251,146,60)'  }]),
+};
+
+function push(chart, ...values) {
+  chart.data.datasets.forEach((ds, i) => {
+    ds.data.push(values[i] ?? null);
+    if (ds.data.length > MAX) ds.data.shift();
+  });
+  chart.update('none');
+}
+
+function rate(key) {
+  if (history.length < 2) return 0;
+  const a = history[history.length - 2], b = history[history.length - 1];
+  const dt = b.ts - a.ts;
+  return dt > 0 ? Math.max(0, (b[key] - (a[key] || 0)) / dt) : 0;
+}
+
+function fmt(n, dec = 1) { return Number.isFinite(n) ? n.toFixed(dec) : '—'; }
+
+async function tick() {
+  try {
+    const d = await fetch('/metrics/json').then(r => r.json());
+    d.ts = Date.now() / 1000;
+    history.push(d);
+    if (history.length > MAX + 1) history.shift();
+
+    const rps       = rate('http_requests_total');
+    const durRate   = rate('http_duration_sum');
+    const cntRate   = rate('http_duration_count');
+    const latMs     = cntRate > 0 ? (durRate / cntRate) * 1000 : 0;
+    const buyRate   = rate('orders.buy');
+    const sellRate  = rate('orders.sell');
+    const cpuPct    = rate('cpu_seconds') * 100;
+    const memMB     = d.memory_bytes / 1024 / 1024;
+    const ohlcAvgMs = d.ohlc_rebuild_count > 0
+      ? (d.ohlc_rebuild_sum / d.ohlc_rebuild_count) * 1000 : 0;
+
+    document.getElementById('ts').textContent = new Date().toLocaleTimeString();
+    document.getElementById('s-users').textContent = d.active_users;
+    document.getElementById('s-round').textContent = d.round_running ? 'Running' : 'Stopped';
+    const card = document.getElementById('s-round-card');
+    card.className = 'stat ' + (d.round_running ? 'green' : 'red');
+    document.getElementById('s-rps').textContent = fmt(rps);
+    document.getElementById('s-lat').textContent = fmt(latMs) + ' ms';
+
+    push(charts.rps,    rps);
+    push(charts.lat,    latMs);
+    push(charts.orders, buyRate, sellRate);
+    push(charts.cpu,    cpuPct);
+    push(charts.mem,    memMB);
+    push(charts.ohlc,   ohlcAvgMs);
+  } catch (e) { console.warn('metrics fetch failed', e); }
+}
+
+// rate() accesses nested keys via dot notation — patch history entries
+const _push = history.push.bind(history);
+history.push = function(entry) {
+  const flat = { ...entry };
+  if (entry.orders) { flat['orders.buy'] = entry.orders.buy || 0; flat['orders.sell'] = entry.orders.sell || 0; }
+  return _push(flat);
+};
+
+tick();
+setInterval(tick, 2000);
+</script>
+</body>
+</html>
