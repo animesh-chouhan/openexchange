@@ -15,7 +15,20 @@ cd "$REPO_DIR"
 CURRENT_BRANCH="$(git branch --show-current)"
 
 git fetch origin
+BEFORE="$(git rev-parse HEAD)"
 git pull --ff-only origin "$CURRENT_BRANCH"
+AFTER="$(git rev-parse HEAD)"
+
 uv sync --all-groups
 systemctl restart "${SERVICE_NAME}.service"
 systemctl status "${SERVICE_NAME}.service" --no-pager
+
+# Reload nginx only if the config changed in this pull
+if git diff --name-only "$BEFORE" "$AFTER" | grep -q "^deploy/nginx.conf$"; then
+  if command -v nginx >/dev/null 2>&1 && nginx -t -q 2>/dev/null; then
+    echo "nginx config changed — reloading"
+    systemctl reload nginx
+  else
+    echo "nginx config changed but test failed — skipping reload" >&2
+  fi
+fi
