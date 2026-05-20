@@ -43,7 +43,7 @@ Notes and recommendations
 ```bash
 pip install -r requirements.txt
 # example: 4 workers
-gunicorn -k uvicorn.workers.UvicornWorker -w 4 server:app -b 0.0.0.0:8000
+gunicorn -k uvicorn.workers.UvicornWorker -w 4 app.main:app -b 0.0.0.0:8000
 ```
 
 - For write-heavy scenarios, either run the built-in engine in single-process mode or scaffold the Redis producer/consumer before scaling to many API workers.

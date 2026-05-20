@@ -1,7 +1,7 @@
 import time
 import matplotlib.pyplot as plt
 from random import randint, choice, uniform
-from engine_heapnodes import Order, OrderBook
+from engine.heapnodes import Order, OrderBook
 import logging
 
 logger = logging.getLogger(__name__)

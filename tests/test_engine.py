@@ -7,9 +7,9 @@ from decimal import Decimal
 
 # A list of engine modules to be tested
 ENGINES_TO_TEST = [
-    'engine',
-    'engine_naive',
-    'engine_fifo',
+    'engine.heap',
+    'engine.naive',
+    'engine.fifo',
 ]
 
 class EngineTestMixin:
@@ -25,6 +25,12 @@ class EngineTestMixin:
         if isinstance(self.book.trades, dict):
             return list(self.book.trades.values())
         return self.book.trades
+
+    def _get_trade_buy_id(self, trade):
+        """Helper for engines that name the buyer id field differently."""
+        if hasattr(trade, "buy_id"):
+            return trade.buy_id
+        return trade.buy_order_id
 
     def test_simple_trade(self):
         """Tests a full trade between one buy and one sell order."""
@@ -112,6 +118,53 @@ class EngineTestMixin:
         # Check that the old order is cancelled
         self.assertTrue(order_to_update.cancelled)
 
+    def test_price_priority_matches_best_bid_first(self):
+        """Highest bid should fill before lower bids."""
+        low_bid = self.Order("buy", 99, 10)
+        high_bid = self.Order("buy", 101, 10)
+        self.book.place_order(low_bid)
+        self.book.place_order(high_bid)
+
+        self.book.place_order(self.Order("sell", 99, 10))
+
+        trades = self._get_trades()
+        self.assertEqual(len(trades), 1)
+        self.assertEqual(self._get_trade_buy_id(trades[0]), high_bid.id)
+        self.assertEqual(high_bid.remaining, 0)
+        self.assertEqual(low_bid.remaining, 10)
+
+    def test_fifo_priority_within_same_price_level(self):
+        """At the same price, the oldest order should fill first."""
+        if self.engine_name != "engine.fifo":
+            self.skipTest("Strict FIFO priority is only guaranteed by engine.fifo")
+
+        first_bid = self.Order("buy", 100, 10)
+        second_bid = self.Order("buy", 100, 10)
+        self.book.place_order(first_bid)
+        self.book.place_order(second_bid)
+
+        self.book.place_order(self.Order("sell", 100, 15))
+
+        trades = self._get_trades()
+        self.assertEqual(
+            [self._get_trade_buy_id(trade) for trade in trades],
+            [first_bid.id, second_bid.id],
+        )
+        self.assertEqual(first_bid.remaining, 0)
+        self.assertEqual(second_bid.remaining, 5)
+
+    def test_order_book_depth_removes_filled_and_cancelled_orders(self):
+        """Depth should report only live remaining volume."""
+        live_order = self.Order("buy", 100, 10)
+        cancelled_order = self.Order("buy", 100, 20)
+        self.book.place_order(live_order)
+        self.book.place_order(cancelled_order)
+        self.book.cancel_order(cancelled_order.id)
+
+        depth = self.book.get_order_book_depth()
+
+        self.assertEqual(depth["buy"][Decimal("100")], 10)
+
 
 def create_test_class(engine_name):
     """A factory function to create a TestCase class for a given engine."""
@@ -136,18 +189,19 @@ def create_test_class(engine_name):
             
             self.book = OrderBook()
             self.Order = Order
+            self.engine_name = engine_name
 
             # Suppress print statements from the naive engine during tests
-            if engine_name == 'engine_naive':
+            if engine_name == 'engine.naive':
                 self.held_stdout = sys.stdout
                 sys.stdout = StringIO()
 
         def tearDown(self):
-            if engine_name == 'engine_naive':
+            if engine_name == 'engine.naive':
                 sys.stdout = self.held_stdout
     
     # Set a dynamic name for the class for clear test reporting
-    TestEngine.__name__ = f'Test{engine_name.replace("_", " ").title().replace(" ", "")}'
+    TestEngine.__name__ = f'Test{engine_name.replace(".", " ").replace("_", " ").title().replace(" ", "")}'
     return TestEngine
 
 # Create a global scope variable for each test class

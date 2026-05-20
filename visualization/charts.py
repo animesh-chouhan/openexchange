@@ -13,7 +13,7 @@ from matplotlib.gridspec import GridSpec
 
 import logging
 
-from engine_fifo import Order, OrderBook
+from engine.fifo import Order, OrderBook
 
 logger = logging.getLogger(__name__)
 

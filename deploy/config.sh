@@ -2,7 +2,7 @@
 sudo ls -l /etc/nginx/sites-available/openexchange.conf /etc/nginx/sites-enabled/openexchange*
 
 # if the available file is missing, copy your repo config
-sudo cp /opt/openexchange/server/nginx.conf /etc/nginx/sites-available/openexchange.conf
+sudo cp /opt/openexchange/deploy/nginx.conf /etc/nginx/sites-available/openexchange.conf
 
 # create the symlink nginx is looking for (non-.conf name)
 sudo ln -sf /etc/nginx/sites-available/openexchange.conf /etc/nginx/sites-enabled/openexchange

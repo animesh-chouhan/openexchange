@@ -35,7 +35,7 @@ sudo journalctl -u openexchange.service --since "10 minutes ago"
 - Check for the uvicorn/python process:
 
 ```bash
-ps aux | grep -E 'uvicorn|server:app' | grep -v grep
+ps aux | grep -E 'uvicorn|app.main:app|server:app' | grep -v grep
 ```
 
 - Check listening ports (look for :8000):
@@ -73,7 +73,7 @@ sudo journalctl -u nginx -f
 sudo nginx -t
 ```
 
-- If the project includes `server/nginx.conf`, the setup process copies it to `/etc/nginx/sites-available/openexchange.conf` and enables it.
+- If the project includes `deploy/nginx.conf`, the setup process copies it to `/etc/nginx/sites-available/openexchange.conf` and enables it.
 
 ## Firewall (UFW)
 
@@ -93,7 +93,7 @@ sudo ufw allow 8000/tcp
 
 If you need to inspect the unit that was installed by the setup script, open:
 
-[server/openexchange.service](server/openexchange.service#L1)
+[deploy/openexchange.service](openexchange.service#L1)
 
 Common items to check in the unit:
 

@@ -1,7 +1,7 @@
 ### Trading Simulation Plan
 
 **Overview:**
-Create a competitive trading simulation where multiple users (traders) can place market orders (buy/sell) to compete for the highest portfolio value. The system uses one of the existing matching engines (e.g., engine_fifo) for order matching. A bot market maker maintains liquidity and occasionally manipulates the market (rally or pull down prices).
+Create a competitive trading simulation where multiple users (traders) can place market orders (buy/sell) to compete for the highest portfolio value. The system uses one of the existing matching engines (e.g., `engine.fifo`) for order matching. A bot market maker maintains liquidity and occasionally manipulates the market (rally or pull down prices).
 
 **Key Features:**
 
@@ -19,7 +19,7 @@ Create a competitive trading simulation where multiple users (traders) can place
 1. **Trader Class:** Manages cash, holdings, portfolio value, and orders. Methods: place_market_order, cancel_order, update_portfolio.
 2. **MarketMaker Class:** Maintains liquidity, manipulates market. Methods: maintain_liquidity, manipulate_market.
 3. **TradingSimulation Class:** Orchestrates the simulation. Manages book, traders, market maker. Methods: start_simulation, stop_simulation, get_leaderboard.
-4. **Integration:** Use existing OrderBook from engine_fifo. Handle market orders by setting price to best available (best_ask for buy, best_bid for sell).
+4. **Integration:** Use existing `OrderBook` from `engine.fifo`. Handle market orders by setting price to best available (best_ask for buy, best_bid for sell).
 
 **Technical Details:**
 
@@ -33,6 +33,6 @@ Create a competitive trading simulation where multiple users (traders) can place
 
 - Implement CLI or GUI for user inputs (place orders, cancel, view leaderboard).
 - Add more bots or noise traders.
-- Integrate with visualization.py for real-time charts.
+- Integrate with `visualization/charts.py` for real-time charts.
 - Add persistence (save/load state).
 - Balance mechanics for fair competition.

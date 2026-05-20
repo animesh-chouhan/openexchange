@@ -5,10 +5,7 @@ from collections import defaultdict
 from decimal import Decimal
 import logging
 
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-
-from engine_fifo import OrderBook, Order
+from engine.fifo import OrderBook, Order
 
 # module logger
 logger = logging.getLogger(__name__)
@@ -157,7 +154,7 @@ class TradingSimulation:
             self.book.place_order(buy_order)
             self.book.place_order(sell_order)
         self.running = True
-        threading.Thread(target=self._run_loop).start()
+        threading.Thread(target=self._run_loop, daemon=True).start()
 
     def stop_simulation(self):
         self.running = False
@@ -268,12 +265,15 @@ class TradingSimulation:
 
 # Example usage
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    from matplotlib.animation import FuncAnimation
+
     sim = TradingSimulation(num_traders=10)
     sim.start_simulation()
 
-    import visualization
+    from visualization.charts import Visualization
 
-    vis = visualization.Visualization(sim.book)
+    vis = Visualization(sim.book)
 
     ani = FuncAnimation(vis.fig, vis.update, interval=200)
 

@@ -6,7 +6,7 @@ After=network.target
 User=root
 WorkingDirectory=/opt/openexchange
 Environment="ADMIN_PASSWORD=your-admin-password"
-ExecStart=/opt/openexchange/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8000
+ExecStart=/opt/openexchange/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=3
 

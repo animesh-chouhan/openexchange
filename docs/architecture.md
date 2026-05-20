@@ -8,11 +8,11 @@ Capture the code structure and runtime architecture so it's easy to plan scaling
 
 ## 2. High-level components
 
-- `server.py` — FastAPI HTTP server. Exposes UI routes and REST endpoints used by the web UI and programmatic clients.
-- `trading_sim.py` — `TradingSimulation`, `Trader`, `MarketMaker`. Owns the `OrderBook`, manages simulation threads and producer logic for orders.
-- `engine_fifo.py` — Matching engine implementation (`OrderBook`, `Order`, `Trade`). Core matching logic lives here.
-- `visualization.py`, `templates/`, `static/` — Frontend and visualization assets.
-- `binance.py`, `test.py`, `perf_test.py` — example connectors and test scripts.
+- `app/main.py` — FastAPI HTTP server. Exposes UI routes and REST endpoints used by the web UI and programmatic clients.
+- `engine/simulation.py` — `TradingSimulation`, `Trader`, `MarketMaker`. Owns the `OrderBook`, manages simulation threads and producer logic for orders.
+- `engine/fifo.py` — Matching engine implementation (`OrderBook`, `Order`, `Trade`). Core matching logic lives here.
+- `app/templates/`, `app/static/`, `visualization/charts.py` — Frontend assets and local visualization helpers.
+- `binance.py`, `tests/`, `perf_test.py` — example connectors, tests, and performance scripts.
 
 ## 3. Data model (key types)
 
@@ -23,7 +23,7 @@ Capture the code structure and runtime architecture so it's easy to plan scaling
 
 ## 4. Runtime / process model
 
-- Single-process authoritative mode (current default): `server.py` creates a `TradingSimulation` instance named `sim` and calls `sim.start_simulation()` at startup.
+- Single-process authoritative mode (current default): `app/main.py` creates a `TradingSimulation` instance named `sim` and calls `sim.start_simulation()` at startup.
 - Background threads inside the same process:
   - Simulation thread: market maker loop that places liquidity and updates trader portfolios (runs every second).
   - Random order thread(s): spawned by `sim.trigger_random_orders` for load testing.
@@ -55,7 +55,7 @@ Capture the code structure and runtime architecture so it's easy to plan scaling
 ## 8. Deployment and scaling options (practical)
 
 - **Option A — Simple multi-process (quick):** run Gunicorn with multiple `uvicorn.workers.UvicornWorker` workers. Pros: easy to run and uses multiple cores. Cons: state is duplicated per worker.
-  - Example: `gunicorn -k uvicorn.workers.UvicornWorker -w 4 server:app -b 0.0.0.0:8000`
+  - Example: `gunicorn -k uvicorn.workers.UvicornWorker -w 4 app.main:app -b 0.0.0.0:8000`
 - **Option B — Single authoritative engine + stateless API frontends (recommended for correctness):**
   - One engine process owns `TradingSimulation` and `OrderBook`.
   - API frontends are stateless and forward order requests to the engine (HTTP/gRPC/Redis stream). Reads can be served from a shared cache or from the engine.
@@ -88,13 +88,13 @@ Capture the code structure and runtime architecture so it's easy to plan scaling
 
 ## 13. File map (where to change)
 
-- `server.py` — API glue, sessions, cache thread (move or adapt to worker in new architecture).
-- `trading_sim.py` — simulation loop, trader logic, entrypoint for engine behavior.
-- `engine_fifo.py` — matching logic; consider replacing with a C-extension or Rust service for higher throughput.
+- `app/main.py` — API glue, sessions, and route handlers.
+- `engine/simulation.py` — simulation loop, trader logic, entrypoint for engine behavior.
+- `engine/fifo.py` — matching logic; consider replacing with a C-extension or Rust service for higher throughput.
 
 ## 14. Next recommended task (minimal):
 
-- Implement a Redis-backed order queue and move the cache to Redis so multiple API workers can be used without diverging state. I can scaffold this (producer push in `server.py`, simple consumer in `engine_consumer.py`) if you want.
+- Implement a Redis-backed order queue and move shared state to Redis so multiple API workers can be used without diverging state.
 
 ---
 
