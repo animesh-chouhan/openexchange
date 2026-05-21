@@ -714,6 +714,7 @@ def metrics_json():
         "active_users": 0, "round_running": 0,
         "orders": {"buy": 0, "sell": 0},
         "http_requests_total": 0,
+        "http_status": {"2xx": 0, "3xx": 0, "4xx": 0, "5xx": 0},
         "http_duration_sum": 0.0, "http_duration_count": 0.0,
         "cpu_seconds": 0.0, "memory_bytes": 0.0,
         "ohlc_rebuild_sum": 0.0, "ohlc_rebuild_count": 0.0,
@@ -729,6 +730,15 @@ def metrics_json():
                 result["orders"][s.labels.get("side", "unknown")] = s.value
             elif n == "http_requests_total":
                 result["http_requests_total"] += s.value
+                status = s.labels.get("status", "")
+                if status.endswith("xx"):
+                    bucket = status
+                elif status.isdigit():
+                    bucket = status[0] + "xx"
+                else:
+                    bucket = None
+                if bucket and bucket in result["http_status"]:
+                    result["http_status"][bucket] += s.value
             elif n == "http_request_duration_seconds_sum":
                 result["http_duration_sum"] += s.value
             elif n == "http_request_duration_seconds_count":
